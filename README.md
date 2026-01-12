@@ -1,3 +1,5 @@
+## 请勿在生产环境运行该脚本，请勿短时间多次运行该脚本，请勿尝试将并发数（-m）设置过大<br>
+## 请遵守当地法律法规，运行前仔细研读代码，盲目使用脚本造成的一切后果自负！<br>
 ## 扫描Reality站点<br>
 Usage:<br>
 ```
@@ -9,10 +11,23 @@ Usage:<br>
 -h, --help		  Show this help message
 ```
 用法:<br>
-                默认无参数执行，表示获取本机公网ip，扫描ip/24段可能存在的域名，并检查reality适用性，通过测试的域名放在check_result.txt
--ip <ip_addr>		扫描指定ip/24段可能存在的域名，并检查reality适用性，通过测试的域名放在check_result.txt
--d <file_addr>	Check local domains"
--e <num>		    Epend IP C-segments"
--m <num>		    multithreading, default is 20."
--dp			        Enable deep check "
--h, --help		  Show this help message"
+
+```
+无参数直接执行时，脚本将进行以下操作：
+默认ip扫描模式，使用本机公网ip，扫描ip/24段可能存在的域名，并检查reality适用性，通过测试的域名放在check_result.txt
+-ip <ip_addr>		指定ip
+-d <file_addr>	域名检查模式（本地文件）
+-e <num>		    扩充ip c段
+-m <num>		    设置并发数（默认20）
+-dp			        启用深度检测
+-h, --help		  显示帮助
+```
+## 说明<br>
+支持多参数运行，如：使用-ip <ip_addr>	-d <file_addr>，可检测域名列表在指定ip段的匹配性<br>
+域名列表支持的分割方式：换行，空格，逗号（半角），分号（半角）<br>
+扩展c段一般设置为1~3即可，更大的数字没有意义<br>
+深度检测在不同模式下表现不同：<br>
+ip扫描模式会尝试从san获取更多域名，默认只从cn获取域名<br>
+域名检查模式会检查是否为x2599曲线，默认只检测tls1.3和h2，大多数情况下，域名使用tls1.3就没有必要检查x2599<br>
+最后：请勿在生产环境运行该脚本，请勿短时间多次运行该脚本，请勿尝试将并发数（-m）设置过大<br>
+请遵守当地法律法规，运行前仔细研读代码，盲目使用脚本造成的一切后果自负！<br>
