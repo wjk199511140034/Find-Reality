@@ -2,61 +2,72 @@
 # 1.Prepare
 deep_check=0
 clean=0
-has_ip=0
-enable_scan=1
+fetch_ip=1
+scan_ip=1
+check_domains=0
 expend=0
 bgp_tools=0
 input_ip=""
-USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0"
+ONLINE_UA=""
+USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
 LOCAL_DOMAINS=""
 num_candidates=0
 max_parallel=20
 num_passed=0
 PASSED_DOMAINS=".passed_domains.txt"
 CHECK_RESULT="check_result.txt"
-while [[ -e "$PASSED_DOMAINS" ]]; do
-    PASSED_DOMAINS="${PASSED_DOMAINS%.*}(1).txt"
-done
-if ! touch "$PASSED_DOMAINS" 2>/dev/null; then
-	echo "No permission to create file."
-	echo "Please use sudo to execute script."
-	exit 5
+
+if ! : > "$PASSED_DOMAINS" 2>/dev/null; then
+    echo "No permission to create or clear file.">&2
+    echo "Please use sudo to execute script.">&2
+    exit 5
 fi
 
 usage() {
 	echo "Usage: $0 [OPTIONS]"
 	echo "Options:"
-	echo "  -ip <ip_address>	Manually specify IP"
-	echo "  -d, --deep_check	Enable deep check "
-#	echo "  -b, --bgp_tools	Use bgp.tools get domains list."
-	echo "  -l, --local_domains	Check local files"
-	echo "  -e, --expend		Expend IP C-segments"
-	echo "  -m, --multi_thread	multithreading, default is 20."
+	echo "  -ip <ip_addr>		Manually specify IP"
+	echo "  -d <file_addr>	Check local domains"
+#	echo "  -b 	Use bgp.tools get domains list."
+	echo "  -e <num>		Epend IP C-segments"
+	echo "  -m <num>		multithreading, default is 20."
+	echo "  -dp			Enable deep check "
 	echo "  -h, --help		Show this help message"
 	exit 0
 	}
 
 while [[ "$#" -gt 0 ]]; do
 	case $1 in
-		-ip) input_ip="$2"; has_ip=1; shift 2;;
-		-b|--bgp_tools) bgp_tools=1; shift 1;;
-		-l|--local_domains) LOCAL_DOMAINS="$2"; enable_scan=0; shift 2;;
-		-d|--deep_check) deep_check=1; shift 1;;
-		-e|--expend) expend="$2"; shift 2;;
-		-m|--multi_thread) max_parallel="$2"; shift 2;;
+		-ip) input_ip="$2"; fetch_ip=0; shift 2;;
+		-b) bgp_tools=1; check_domains=1; shift 1;;
+		-d) LOCAL_DOMAINS="$2"; check_domains=1; shift 2;;
+		-dp) deep_check=1; shift 1;;
+		-e) expend="$2"; shift 2;;
+		-m) max_parallel="$2"; shift 2;;
 		-h|--help) usage ;;
 		*) echo "Unknown option: $1" >&2
-		 usage; exit 1 ;;
+		usage; exit 1 ;;
 	esac
 done
 
+if [ "$check_domains" -eq 1 ]; then
+	scan_ip=0
+fi
+
+ONLINE_UA=$(timeout 3 curl -s https://versionhistory.googleapis.com/v1/chrome/platforms/win/channels/stable/versions | grep -oP '"version": "\K[^"]+' | head -1)
+if [[ -n "$ONLINE_UA" ]]; then
+	USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$ONLINE_UA Safari/537.36"
+else
+	echo "Fetch newest UA failed, use default." >&2
+fi
+
 if [[ ! "$max_parallel" =~ ^[0-9]+$ ]]; then
-	echo "Error: -m argument must be a number.."
+	echo "Error: -m argument must be a number" >&2
 	echo "Use -h to show help."
 	exit 1
 elif [[ "$max_parallel" -gt 80  ]]; then
 	echo "Too many thread!">&2
-	echo "You IP may banned by provider!">&2
+	echo "You IP may banned by provider!" >&2
 	read -p "Are you sure? (y/n): " confirm < /dev/tty
 	case "$confirm" in
 		[yY]|[yY][eE][sS])
@@ -68,15 +79,15 @@ elif [[ "$max_parallel" -gt 80  ]]; then
 	esac
 fi
 
-# 2.1 Fetch ip
-if [ "$has_ip" -eq 1 ]; then
+# 2.1 Fetch IP
+if [ "$fetch_ip" -eq 0 ]; then
 	if [[ ! "$input_ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
 		echo "Error: -ip argument must input valid IPv4 address.">&2
 		exit 1
 	else
 		ip_c_list=$(echo "$input_ip" | sed 's/\.[0-9]\{1,3\}$/.0/')
 	fi
-	echo "Using specified IP: $input_ip"
+	echo "Using specified IP: $input_ip">&2
 else
 	input_ip=$(curl -s https://api.ipify.org)
 	if [ -z "$input_ip" ]; then
@@ -93,7 +104,7 @@ if [[ ! "$expend" =~ ^[0-9]+$ ]]; then
 	echo "Error: -e argument must be a number.">&2
 	echo "Use -h to show help.">&2
 	exit 1
-elif [[ "$expend" -gt 0 && "$enable_scan" -eq 1 ]]; then
+elif [[ "$expend" -gt 0 ]]; then
 	echo "Expend $expend IP C-segments based on $input_ip.">&2
 	if [[ "$expend" -gt 4 ]]; then
 		echo "Too many IP need to scan!">&2
@@ -116,8 +127,8 @@ elif [[ "$expend" -gt 0 && "$enable_scan" -eq 1 ]]; then
 	echo "Total $(printf "%b" "$ip_c_list" | grep -c '\.') IP C-segments need to process.">&2
 fi
 
-# 3. Scan domains
-scan_domains() {
+# 3. Scan IP get domains
+scan_ip_fun() {
 	local target_ip=$1
 	local domains=""
 #	Use comman name quick scan
@@ -148,18 +159,18 @@ scan_domains() {
 		fi
 	done <<< "$domains"
 }
-export -f scan_domains
+export -f scan_ip_fun
 export deep_check
+export USER_AGENT
 export PASSED_DOMAINS
-if [ "$enable_scan" -eq 1 ]; then 
+if [ "$scan_ip" -eq 1 ]; then
 	printf "%b\n" "$ip_c_list" | while read -r this_ip_c; do
 		if [[ -z "$this_ip_c" ]]; then
 			continue
 		fi
 		echo "Scanning: ${this_ip_c}/24" >&2 
-		for i in {0..28}; do
-#			scan_domains "${this_ip_c%.*}.${i}" & 
-			{ scan_domains "${this_ip_c%.*}.${i}"; printf "." >&2; } &
+		for i in {0..254}; do
+			{ scan_ip_fun "${this_ip_c%.*}.${i}"; printf "." >&2; } &
 			while [[ $(jobs -p | wc -l) -ge $max_parallel ]]; do
 				wait -n 2>/dev/null || sleep 0.1
 			done
@@ -171,7 +182,7 @@ if [ "$enable_scan" -eq 1 ]; then
 fi
 
 # 4. Check local files
-check_local_domains() {
+check_domains_fun() {
 	local domains=$1
 	local target_ip_c=$2
 	local code=""
@@ -200,26 +211,25 @@ check_local_domains() {
 	fi
 	echo "$domains"
 }
-export -f check_local_domains
+export -f check_domains_fun
 export deep_check
 export USER_AGENT
-if [ "$enable_scan" -eq 0 ]; then 
+export PASSED_DOMAINS
+if [ "$check_domains" -eq 1 ]; then
 ##	max_parallel=1 for debug
 #	max_parallel=1
 	if [[ ! -f "$LOCAL_DOMAINS" ]]; then
 		echo "Error: specified file $LOCAL_DOMAINS not exist!">&2
 	else
-		echo  "Formatting $LOCAL_DOMAINS">&2
+		echo "Formatting $LOCAL_DOMAINS">&2
 		domains_list=$(tr -s '[:blank:],;' '\n' < "$LOCAL_DOMAINS" | sed 's/^\*\.//' | grep -E '^[^.][^ ]*\.[^.]{2,}$' | sort -u)
-		######delete this one when not debug
-		domains_list=$(echo "$domains_list" | sed -n '128,355p')
 		if [[ -n "$domains_list" ]]; then
 			num_candidates=$(echo "$domains_list" | grep -c "")
 			echo "Found $num_candidates candidates.">&2
-#			input_ip=ip_c_list #enable expend for domains check model
+#			input_ip=$ip_c_list #enable expend for domains check model
 			echo "Starting verification based on: $input_ip ">&2
 			printf "%s\n" "$domains_list" | xargs -I {} -P "$max_parallel" \
-				bash -c 'check_local_domains "$1" "$2"; echo -n "." >&2' -- {} "$input_ip" \
+				bash -c 'check_domains_fun "$1" "$2"; echo -n "." >&2' -- {} "$input_ip" \
 				>> "$PASSED_DOMAINS"
 			echo -e "\nDone!">&2
 		else
@@ -231,11 +241,14 @@ fi
 # 4.Save result
 sort -u "$PASSED_DOMAINS" -o "$PASSED_DOMAINS" && sed -i '/^$/d' "$PASSED_DOMAINS"
 if [ -s "$PASSED_DOMAINS" ]; then
-    mv "$PASSED_DOMAINS" "$CHECK_RESULT"
+	while [[ -e "$CHECK_RESULT" ]]; do
+		CHECK_RESULT="${CHECK_RESULT%.*}(1).txt"
+	done
+	mv "$PASSED_DOMAINS" "$CHECK_RESULT"
 	num_passed=$(grep -c '\.' "$CHECK_RESULT")
 	echo "Found $num_passed passed domains.">&2
 	echo "Check $CHECK_RESULT to see more details.">&2
 else
-    echo "No passed domains found." >&2
-    rm -f "$PASSED_DOMAINS"
+	echo "No passed domains found." >&2
+	rm -f "$PASSED_DOMAINS"
 fi
