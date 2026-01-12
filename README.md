@@ -4,23 +4,23 @@
 Usage:<br>
 ```
 -ip <ip_addr>		Manually specify IP
--d <file_addr>	Check local domains
+  -d <file_addr>	Check local domains
 -e <num>		    Epend IP C-segments
 -m <num>		    multithreading, default is 20
 -dp			        Enable deep check
--h, --help		  Show this help message
+-h, --help          Show this help message
 ```
 用法:<br>
 
 ```
 无参数直接执行时，脚本将进行以下操作：
 默认ip扫描模式，使用本机公网ip，扫描ip/24段可能存在的域名，并检查reality适用性，通过测试的域名放在check_result.txt
--ip <ip_addr>    指定ip
--d <file_addr>  域名检查模式（本地文件）
--e <num>    扩充ip c段
--m <num>    设置并发数（默认20）
--dp    启用深度检测
--h, --help    显示帮助
+-ip <ip_addr>      指定ip
+-d <file_addr>     域名检查模式（本地文件）
+-e <num>           扩充ip c段
+-m <num>           设置并发数（默认20）
+-dp                启用深度检测
+-h, --help         显示帮助
 ```
 ## 说明<br>
 支持多参数运行，如：使用-ip <ip_addr>	-d <file_addr>，可检测域名列表在指定ip段的匹配性<br>
