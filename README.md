@@ -1,7 +1,7 @@
 **请勿在生产环境运行该脚本，请勿短时间多次运行该脚本，请勿尝试将并发数（-m）设置过大<br>
 请遵守当地法律法规，运行前仔细研读代码，盲目使用脚本造成的一切后果自负！**<br>
 ## 扫描Reality站点<br>
-```wget https://raw.githubusercontent.com/wjk199511140034/Find-Reality/main/find_reality.sh```
+```wget https://raw.githubusercontent.com/wjk199511140034/Find-Reality/main/find_reality.sh```<br>
 Usage:<br>
 ```
 -ip <ip_addr>		Manually specify IP
