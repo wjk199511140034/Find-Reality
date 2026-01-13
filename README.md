@@ -41,6 +41,6 @@ Please comply with local laws and regulations. Read the code carefully before ex
 CDN检测原理：通过```getent ahosts <hostname>```，查看响应IP是否与公网IP/指定IP在同一个C段<br>
 深度检测在不同模式下表现不同：<br>
 &emsp;&emsp;ip扫描模式：会尝试从SAN获取更多域名，默认只从CN获取域名<br>
-&emsp;&emsp;域名检查模式：会检查是否采用x25519椭圆曲线，默认只检测tls1.3和h2，大多数情况下，域名使用tls1.3默认x25519<br>
+&emsp;&emsp;域名检查模式：会检查是否为x25519，默认只检测tls1.3和h2，通常情况下，使用tls1.3默认x25519<br>
 最后：请勿在生产环境运行该脚本，请勿短时间多次运行该脚本，请勿尝试将并发数（-m）设置过大<br>
 请遵守当地法律法规，运行前仔细研读代码，滥用脚本造成的一切后果自负！<br>
