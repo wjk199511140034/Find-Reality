@@ -15,13 +15,14 @@ Defaults mode is IP scanning, using the server's public IP, scans the /24 subnet
 -ip <ip_addr>		Manually specify IP
 -d <file_addr>  	Check local domains
 -e <num>		    Epend IP C-segments
--m <num>		    multithreading, default is 20
+-m <num>		    Concurrency, default is 20
 -dp			        Enable deep check
 -h, --help          Show this help message
 ```
 ## WARNING<br>
-Do not run this script in a production environment. Do not run this script multiple times within a short period. Do not attempt to set the concurrency limit (-m) too high.<br>
-Please comply with local laws and regulations. Read the code carefully before execution. Use this script at your own risk; the user is solely responsible for any consequences caused by the abuse of this script!<br>
+Do not run this script in a production environment. Do not run this script multiple times within a short period. Do not attempt to set the concurrency (-m) too high.<br>
+Please comply with local laws and regulations. Read the code carefully before execution. Use this script at your own risk.<br>
+You are solely responsible for any consequences caused by the abuse of this script!<br>
 ## 扫描Reality站点<br>
 用法:<br>
 ```
